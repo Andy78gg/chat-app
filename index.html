@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>豆包聊天室</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="app">
+    <!-- 昵称设置弹窗 -->
+    <div class="modal-overlay" id="nameModal">
+      <div class="modal">
+        <h2>👋 欢迎来到聊天室</h2>
+        <p>先给自己起个名字吧</p>
+        <input type="text" id="nameInput" placeholder="输入你的昵称" maxlength="20" autocomplete="off" />
+        <button id="nameConfirm">进入聊天室</button>
+      </div>
+    </div>
+
+    <!-- 聊天主界面 -->
+    <div class="chat hidden" id="chat">
+      <header class="chat-header">
+        <h1>💬 豆包聊天室</h1>
+        <span class="online-info" id="onlineInfo"></span>
+        <button class="change-name" id="changeName">换昵称</button>
+      </header>
+
+      <main class="messages" id="messages"></main>
+
+      <footer class="input-bar">
+        <input type="text" id="messageInput" placeholder="说点什么吧…" maxlength="500" autocomplete="off" />
+        <button id="sendButton">发送</button>
+      </footer>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 公开聊天室：任何人可读
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 20
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 500;
+      // 允许发送方随时删除自己的消息
+      allow delete: if request.auth != null;
+      // 不允许覆盖已有消息
+      allow update: if false;
+    }
+  }
+}
