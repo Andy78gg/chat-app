@@ -1,15 +1,13 @@
 // ============================================================
-// Firebase 配置（占位符）
-// 创建好 Firebase 项目后，把下面 5 项替换成你自己的配置即可。
-// 获取位置：Firebase 控制台 → 项目设置 → 常规 → 你的应用 → SDK 设置和配置
+// Firebase 配置（已填入）
 // ============================================================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyB4e4FOw71XX155mFadqpOxn7hSH7BNWYg",
+  authDomain: "my-chat-room-83418.firebaseapp.com",
+  projectId: "my-chat-room-83418",
+  storageBucket: "my-chat-room-83418.firebasestorage.app",
+  messagingSenderId: "694895631506",
+  appId: "1:694895631506:web:7de6ff46cfe988c130da4b"
 };
 
 // ------------------------------------------------------------
