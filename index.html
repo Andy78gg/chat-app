@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ruian聊天室</title>
+  <title>豆包聊天室</title>
   <link rel="stylesheet" href="style.css" />
   <script type="importmap">
   {
     "imports": {
       "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
+      "firebase/storage": "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js"
     }
   }
   </script>
@@ -29,7 +30,7 @@
     <!-- 聊天主界面 -->
     <div class="chat hidden" id="chat">
       <header class="chat-header">
-        <h1>ruian聊天室</h1>
+        <h1>💬 豆包聊天室</h1>
         <span class="online-info" id="onlineInfo"></span>
         <button class="change-name" id="changeName">换昵称</button>
       </header>
@@ -37,6 +38,8 @@
       <main class="messages" id="messages"></main>
 
       <footer class="input-bar">
+        <input type="file" id="imageInput" accept="image/*" hidden />
+        <button class="image-button" id="imageButton" title="发图片">🖼️</button>
         <input type="text" id="messageInput" placeholder="说点什么吧…" maxlength="500" autocomplete="off" />
         <button id="sendButton">发送</button>
       </footer>

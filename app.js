@@ -25,9 +25,16 @@ import {
   serverTimestamp,
   Timestamp
 } from "firebase/firestore";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "firebase/storage";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // 页面元素
 const nameModal = document.getElementById("nameModal");
@@ -39,6 +46,8 @@ const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const changeName = document.getElementById("changeName");
 const onlineInfo = document.getElementById("onlineInfo");
+const imageButton = document.getElementById("imageButton");
+const imageInput = document.getElementById("imageInput");
 
 // 本地昵称（存浏览器里，下次访问不用再输）
 let myName = localStorage.getItem("chat_nickname") || "";
@@ -83,6 +92,7 @@ async function sendMessage() {
   try {
     await addDoc(collection(db, "messages"), {
       name: myName,
+      type: "text",
       text: text,
       timestamp: serverTimestamp()
     });
@@ -97,6 +107,81 @@ async function sendMessage() {
 sendButton.addEventListener("click", sendMessage);
 messageInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendMessage();
+});
+
+// ---------- 发送图片 ----------
+// 本地压缩图片，减小上传体积
+function compressImage(file, maxSize = 1280, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("读取图片失败"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("图片解析失败"));
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(1, maxSize / Math.max(width, height));
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("压缩失败"))),
+          "image/jpeg",
+          quality
+        );
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function sendImage(file) {
+  if (!file) return;
+  // 上传中禁用按钮，防止重复点击
+  imageButton.disabled = true;
+  sendButton.disabled = true;
+  const tip = document.createElement("div");
+  tip.className = "message others";
+  tip.innerHTML = '<span class="sending-tip">发送图片中…</span>';
+  messagesEl.appendChild(tip);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const ext = "jpg";
+    const fileName = `images/${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}.${ext}`;
+    const storageRef = ref(storage, fileName);
+    const blob = await compressImage(file);
+    await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+    const imageUrl = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, "messages"), {
+      name: myName,
+      type: "image",
+      imageUrl: imageUrl,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.error("图片发送失败:", err);
+    alert("图片发送失败，请确认已开启 Firebase Storage，并已发布 Storage 规则。");
+  } finally {
+    tip.remove();
+    imageButton.disabled = false;
+    sendButton.disabled = false;
+    imageInput.value = "";
+  }
+}
+
+imageButton.addEventListener("click", () => imageInput.click());
+imageInput.addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) sendImage(file);
 });
 
 // ---------- 实时接收消息 ----------
@@ -119,9 +204,11 @@ const messagesQuery = query(
   limit(100)
 );
 
+let lastScrollHeight = 0;
 let isNearBottom = true;
 
 onSnapshot(messagesQuery, (snapshot) => {
+  // 记录是否停在底部
   const el = messagesEl;
   isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
 
@@ -129,10 +216,11 @@ onSnapshot(messagesQuery, (snapshot) => {
   // 反向排序，让时间从旧到新（最新在底部）
   const messages = docs.slice().reverse();
 
-  // 增量更新：用 Set 记录已渲染的消息 id
+  // 增量更新：用一个 Set 记录已渲染的消息 id
   if (!window.__renderedIds) window.__renderedIds = new Set();
 
   let anyNew = false;
+  let hasRendered = false;
 
   for (const doc of messages) {
     const id = doc.id;
@@ -144,16 +232,29 @@ onSnapshot(messagesQuery, (snapshot) => {
     const ts = data.timestamp;
     const mine = data.name === myName;
     const msgEl = document.createElement("div");
-    msgEl.className = `message ${mine ? "mine" : "others"}`;
+    msgEl.className = `message ${mine ? "mine" : "others"} ${data.type === "image" ? "image" : ""}`;
 
     const meta = document.createElement("span");
     meta.className = "meta";
     meta.textContent = data.name || "匿名";
     msgEl.appendChild(meta);
 
-    const body = document.createElement("span");
-    body.textContent = data.text || "";
-    msgEl.appendChild(body);
+    if (data.type === "image") {
+      const img = document.createElement("img");
+      img.className = "msg-img";
+      img.src = data.imageUrl;
+      img.loading = "lazy";
+      img.alt = "图片";
+      img.referrerPolicy = "no-referrer";
+      img.addEventListener("click", () => {
+        window.open(data.imageUrl, "_blank");
+      });
+      msgEl.appendChild(img);
+    } else {
+      const body = document.createElement("span");
+      body.textContent = data.text || "";
+      msgEl.appendChild(body);
+    }
 
     const time = document.createElement("span");
     time.className = "time";
@@ -161,6 +262,7 @@ onSnapshot(messagesQuery, (snapshot) => {
     msgEl.appendChild(time);
 
     messagesEl.appendChild(msgEl);
+    hasRendered = true;
   }
 
   onlineInfo.textContent = `在线消息 ${snapshot.size} 条`;
