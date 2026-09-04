@@ -1,12 +1,12 @@
 # 💬 豆包聊天室
 
-一个简单的多人实时聊天室。前端是纯 HTML/CSS/JS，托管在 GitHub Pages；消息存储用 Firebase Firestore，图片存储用 Firebase Storage，无需自己写服务器。
+一个简单的多人实时聊天室。前端是纯 HTML/CSS/JS，托管在 GitHub Pages；消息和图片都存 Firebase Firestore（图片本地压缩后以 base64 直接入库），完全使用免费套餐，无需绑卡、无需自建服务器。
 
 ## 功能
 
 - 进入时输入昵称（下次访问自动记住）
 - 多人实时收发消息（Firebase 实时同步）
-- **发送图片**（自动压缩后上传到 Firebase Storage，点击可查看大图）
+- **发送图片**（本地自动压缩后直接存入 Firestore，点击消息里的图可查看大图）
 - 手机 / 电脑都能用，响应式布局
 
 ## 目录结构
@@ -16,8 +16,7 @@ chat-app/
 ├── index.html    # 页面结构
 ├── style.css     # 样式
 ├── app.js        # 逻辑 + Firebase 接入
-├── firestore.rules  # Firestore 安全规则（部署用）
-└── storage.rules    # Storage 安全规则（部署用）
+└── firestore.rules  # Firestore 安全规则（部署用）
 ```
 
 ## 运行前必做：配置 Firebase
@@ -45,12 +44,7 @@ firebase init firestore   # 选择本项目
 firebase deploy --only firestore
 ```
 
-### 部署 Storage 安全规则（发图片需要）
-
-1. 控制台左侧「构建」→「Storage」→「开始使用」→ 生产模式 → 完成
-2. Storage → 规则 → 粘贴 `storage.rules` 内容 → 发布
-
-> ⚠️ 注意：公开聊天室任何人（知道链接的人）都可以读写。`firestore.rules` 和 `storage.rules` 已加了基础校验（昵称/内容长度限制、图片大小限制），但如果你想更严格，建议后续加个简单的房间口令或匿名认证。
+> ⚠️ 注意：公开聊天室任何人（知道链接的人）都可以读写。`firestore.rules` 已加了基础校验（昵称/文字长度、图片大小）。图片以 base64 直接存入 Firestore，单张压缩后约几十~几百 KB，Firestore 免费档约 1GB 存储、够存几百到上千张图；如果之后图片多了，再考虑升级 Blaze 用 Storage。
 
 ## 本地预览
 

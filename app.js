@@ -25,16 +25,9 @@ import {
   serverTimestamp,
   Timestamp
 } from "firebase/firestore";
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "firebase/storage";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 // 页面元素
 const nameModal = document.getElementById("nameModal");
@@ -110,8 +103,8 @@ messageInput.addEventListener("keydown", (e) => {
 });
 
 // ---------- 发送图片 ----------
-// 本地压缩图片，减小上传体积
-function compressImage(file, maxSize = 1280, quality = 0.82) {
+// 本地压缩图片并转为 base64，直接存入 Firestore（无需 Storage / 付费套餐）
+function compressImage(file, maxSize, quality) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("读取图片失败"));
@@ -140,36 +133,46 @@ function compressImage(file, maxSize = 1280, quality = 0.82) {
   });
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("图片转换失败"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function sendImage(file) {
   if (!file) return;
-  // 上传中禁用按钮，防止重复点击
+  // 处理中禁用按钮，防止重复点击
   imageButton.disabled = true;
   sendButton.disabled = true;
   const tip = document.createElement("div");
   tip.className = "message others";
-  tip.innerHTML = '<span class="sending-tip">发送图片中…</span>';
+  tip.innerHTML = '<span class="sending-tip">处理图片中…</span>';
   messagesEl.appendChild(tip);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   try {
-    const ext = "jpg";
-    const fileName = `images/${Date.now()}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}.${ext}`;
-    const storageRef = ref(storage, fileName);
-    const blob = await compressImage(file);
-    await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
-    const imageUrl = await getDownloadURL(storageRef);
+    // 先按较高质量压缩；若仍偏大则降质重压，确保不超过 Firestore 1MB 文档限制
+    let blob = await compressImage(file, 1080, 0.78);
+    if (blob.size > 620 * 1024) {
+      blob = await compressImage(file, 700, 0.6);
+    }
+    if (blob.size > 620 * 1024) {
+      throw new Error("图片太大，请换一张较小的图片");
+    }
+    const dataUrl = await blobToDataUrl(blob);
 
     await addDoc(collection(db, "messages"), {
       name: myName,
       type: "image",
-      imageUrl: imageUrl,
+      imageUrl: dataUrl,
       timestamp: serverTimestamp()
     });
   } catch (err) {
     console.error("图片发送失败:", err);
-    alert("图片发送失败，请确认已开启 Firebase Storage，并已发布 Storage 规则。");
+    alert("图片发送失败：" + (err.message || "请重试"));
   } finally {
     tip.remove();
     imageButton.disabled = false;

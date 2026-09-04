@@ -17,8 +17,9 @@ service cloud.firestore {
                       ||
                       (request.resource.data.type == "image"
                        && request.resource.data.imageUrl is string
-                       && request.resource.data.imageUrl.size() > 0
-                       && request.resource.data.imageUrl.size() <= 600)
+                       && request.resource.data.imageUrl.size() > 20
+                       && request.resource.data.imageUrl.size() <= 900000
+                       && request.resource.data.imageUrl.startsWith("data:image/"))
                     );
       // 不允许删除或覆盖已有消息
       allow delete: if false;
